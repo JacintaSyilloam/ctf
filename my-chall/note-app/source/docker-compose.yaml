@@ -1,0 +1,7 @@
+version: '3.7'
+services:
+  web-note-app:
+    build: .
+    ports:
+      - 30002:2025
+    restart: always
