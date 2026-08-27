@@ -1,0 +1,9 @@
+version: '3.8'
+
+services:
+  webapp:
+    build: .
+    container_name: web-challenge
+    ports:
+      - "1337:80"
+    restart: always

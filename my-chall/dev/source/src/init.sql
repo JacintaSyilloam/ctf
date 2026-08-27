@@ -1,0 +1,14 @@
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS internal_users;
+
+CREATE TABLE users (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  username TEXT NOT NULL,
+  password TEXT NOT NULL
+);
+
+CREATE TABLE internal_users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL,
+    password_hash TEXT NOT NULL
+);

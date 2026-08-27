@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Internal Login</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+</head>
+<body>
+    <div class="container">
+        <h1>Internal Admin Panel</h1>
+        <div class="card">
+            <form method="post" action="/internal_login">
+                <label for="username">Username:</label>
+                <input type="text" id="username" name="username">
+                <br><br>
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password">
+                <br><br>
+                <button type="submit" class="button">Login</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

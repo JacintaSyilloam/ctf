@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>API Tester</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div>
+                <h1>API Tester Dashboard</h1>
+                <p>Welcome, developer! Use this tool to test POST requests to our partner, <strong>certainweb.com</strong>.</p>
+            </div>
+            <div><a class="button secondary" href="/logout">Logout</a></div>
+        </div>
+
+        <form method="post" action="/api_tester" class="card">
+            <div class="form-row">
+                <div>
+                    <label for="url">Target URL:</label>
+                    <input type="text" id="url" name="url" required>
+                </div>
+            </div>
+            <div style="margin-top:12px">
+                <label for="content">POST Data:</label>
+                <textarea id="content" name="content" rows="5"></textarea>
+            </div>
+            <div style="margin-top:12px;text-align:right">
+                <button type="submit" class="button">Send Request</button>
+            </div>
+        </form>
+
+        <hr>
+        <h3>Response:</h3>
+        <pre><code>{{ response_text }}</code></pre>
+    </div>
+</body>
+</html>

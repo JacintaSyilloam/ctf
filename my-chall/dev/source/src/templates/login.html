@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Developer Login</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+</head>
+<body>
+    <div class="container">
+        <h1>Developer Portal Login</h1>
+        {% if error %}
+            <p style="color:#f87171">{{ error }}</p>
+        {% endif %}
+        <div class="card">
+            <form method="post" action="/login">
+                <label for="username">Username:</label>
+                <input type="text" id="username" name="username" value="developer" required>
+                <br><br>
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" required>
+                <br><br>
+                <button type="submit" class="button">Login</button>
+            </form>
+        </div>
+        <p style="margin-top:12px;color:var(--muted)">Log in to test our company partner APIs.</p>
+    </div>
+</body>
+</html>
