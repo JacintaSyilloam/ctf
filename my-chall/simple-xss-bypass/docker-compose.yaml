@@ -1,0 +1,7 @@
+version: '3.7'
+services:
+  web-anon-message:
+    build: .
+    ports:
+      - 30009:2025
+    restart: always

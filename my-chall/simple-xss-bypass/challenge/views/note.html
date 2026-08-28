@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Message</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-neutral-50">
+    <header class="sticky top-0 z-10 border-b border-neutral-200 bg-white/80 backdrop-blur">
+        <div class="mx-auto max-w-2xl px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <button onclick="history.back()" class="border border-neutral-300 px-3 py-1.5 text-sm text-neutral-700 hover:bg-neutral-100">Back</button>
+                <span class="font-semibold">Message</span>
+            </div>
+            <a href="/admin" class="text-sm text-neutral-700 hover:text-neutral-900">Admin</a>
+        </div>
+    </header>
+    <main class="mx-auto max-w-2xl px-4 py-6 font-sans">
+        <div class="border border-neutral-200 bg-white shadow-sm">
+            <div class="p-5" id="content">
+                <pre id="note" class="whitespace-pre-wrap break-words text-[15px]"></pre>
+            </div>
+        </div>
+        <div class="mt-4">
+            <button id="reportToAdmin" class="border border-neutral-300 bg-white px-4 py-2 text-sm hover:bg-neutral-100">Report to Admin</button>
+        </div>
+    </main>
+    <script src="/static/js/script.js"></script>
+    <script>
+        const note = document.getElementById('note');
+        const url = window.location.href;
+        const id = url.split('/')[3];
+        fetch(`/api/note/${id}`)
+        .then(res => res.json())
+        .then(data => {
+            note.innerHTML = data.value;
+        })
+
+    
+    const reportToAdminButton = document.getElementById("reportToAdmin");
+    reportToAdminButton.addEventListener("click", () => {
+            fetch(`/api/report/`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    id: id
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success) {
+                    alert("Your message has been reported to Admin. Thank you for your contribution.");
+                } else {
+                    alert("Something went wrong. Please try again later.");
+                }
+            })
+        })
+    </script>
+</body>
+</html>

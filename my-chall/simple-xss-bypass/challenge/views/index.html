@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anonymous Message Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; img-src 'self' data:; style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com;">
+</head>
+<body class="bg-neutral-50 font-sans">
+    <main class="mx-auto max-w-2xl px-4 py-8">
+        <div class="mb-5 flex items-end justify-between">
+            <h1 class="text-2xl font-semibold text-neutral-900">Anonymous Message Portal</h1>
+            <a href="/admin" class="text-sm text-neutral-600 hover:text-neutral-900">Admin</a>
+        </div>
+
+        <div class="rounded-xl border border-neutral-200 bg-white shadow-sm">
+            <div class="p-4">
+                <textarea id="note" rows="4" class="w-full resize-y rounded-lg border border-neutral-300 bg-white p-3 text-[15px] placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-800/10 focus:border-neutral-400" placeholder="Write an anonymous message...&#10;You can paste links too e.g. http://example.com"></textarea>
+                <div class="mt-3 flex items-center justify-end">
+                    <button id="submit" type="button" class="inline-flex items-center gap-2 rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-neutral-900/20">
+                        Post
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <section class="mt-6">
+            <div class="rounded-xl border border-neutral-200 bg-white shadow-sm">
+                <div class="px-4 py-3 border-b border-neutral-200 text-sm font-medium text-neutral-700">Your messages</div>
+                <div id="messagesList" class="rounded-b-xl overflow-hidden"></div>
+            </div>
+        </section>
+    </main>
+    <script src="/static/js/script.js"></script>
+</body>
+</html>
