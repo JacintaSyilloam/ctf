@@ -1,0 +1,23 @@
+{
+  "name": "managementpro-ctf",
+  "version": "1.0.0",
+  "description": "ManagementPro - Internal IT Ticketing System (XSS CTF Challenge)",
+  "main": "src/app.js",
+  "scripts": {
+    "start": "node src/app.js",
+    "dev": "nodemon src/app.js"
+  },
+  "keywords": ["ctf", "xss", "prompt-injection"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "cookie-parser": "^1.4.6",
+    "better-sqlite3": "^9.2.2",
+    "puppeteer": "^21.9.0",
+    "axios": "^1.6.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  }
+}

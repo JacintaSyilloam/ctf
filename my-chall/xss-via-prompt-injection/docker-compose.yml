@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - OLLAMA_HOST=http://host.docker.internal:11434
+      - FLAG=FLAG{pr0mpt_1nj3ct10n_XSS_1s_d4ng3r0us}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped

@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - ManagementPro</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: white;
+            padding: 20px 40px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            color: #667eea;
+            font-size: 24px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .username {
+            color: #333;
+            font-weight: 600;
+        }
+
+        .logout-btn {
+            padding: 8px 20px;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .logout-btn:hover {
+            background: #c0392b;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .section {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+
+        .section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        input[type="text"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .btn-primary {
+            padding: 12px 30px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+        }
+
+        .btn-primary:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .message {
+            padding: 12px;
+            border-radius: 5px;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .message.show {
+            display: block;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #eee;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            background: none;
+            border: none;
+            color: #666;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .ticket-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .ticket-item {
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .ticket-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .ticket-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 10px;
+        }
+
+        .ticket-title {
+            font-weight: 600;
+            color: #333;
+            font-size: 16px;
+        }
+
+        .ticket-date {
+            color: #999;
+            font-size: 13px;
+        }
+
+        .ticket-meta {
+            display: flex;
+            gap: 20px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .char-counter {
+            text-align: right;
+            font-size: 12px;
+            color: #999;
+            margin-top: 5px;
+        }
+
+        .char-counter.warning {
+            color: #f39c12;
+            font-weight: 600;
+        }
+
+        .ai-notice {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            color: #856404;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 13px;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .ai-notice.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>ManagementPro</h1>
+        <div class="user-info">
+            <span class="username" id="currentUser">Loading...</span>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="section">
+            <h2>Create New Ticket</h2>
+            <form id="ticketForm">
+                <div class="form-group">
+                    <label for="title">Title</label>
+                    <input type="text" id="title" name="title" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="description">Description</label>
+                    <textarea id="description" name="description" required></textarea>
+                    <div class="char-counter" id="charCounter">0 characters</div>
+                    <div class="ai-notice" id="aiNotice">
+                        ℹ️ This ticket description exceeds 500 characters and will be automatically summarized by our AI assistant for the recipient.
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="assignTo">Assign To</label>
+                    <select id="assignTo" name="assignTo" required>
+                        <option value="">Select a user...</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="btn-primary" id="submitBtn">Create Ticket</button>
+
+                <div class="message" id="ticketMessage"></div>
+            </form>
+        </div>
+
+        <div class="section">
+            <h2>My Tickets</h2>
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('assigned')">Assigned to Me</button>
+                <button class="tab" onclick="switchTab('created')">Created by Me</button>
+            </div>
+
+            <div class="tab-content active" id="assignedTab">
+                <div class="ticket-list" id="assignedTickets">
+                    <div class="empty-state">Loading tickets...</div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="createdTab">
+                <div class="ticket-list" id="createdTickets">
+                    <div class="empty-state">Loading tickets...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+
+        // Check authentication
+        async function checkAuth() {
+            try {
+                const response = await fetch('/api/me');
+                if (!response.ok) {
+                    window.location.href = '/login';
+                    return;
+                }
+                const data = await response.json();
+                currentUser = data;
+                document.getElementById('currentUser').textContent = data.username;
+            } catch (error) {
+                window.location.href = '/login';
+            }
+        }
+
+        // Load users for assignment
+        async function loadUsers() {
+            try {
+                const response = await fetch('/api/users');
+                const users = await response.json();
+                const select = document.getElementById('assignTo');
+                
+                users.forEach(user => {
+                    const option = document.createElement('option');
+                    option.value = user.username;
+                    option.textContent = user.username;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Failed to load users:', error);
+            }
+        }
+
+        // Character counter
+        const descriptionField = document.getElementById('description');
+        const charCounter = document.getElementById('charCounter');
+        const aiNotice = document.getElementById('aiNotice');
+
+        descriptionField.addEventListener('input', () => {
+            const length = descriptionField.value.length;
+            charCounter.textContent = `${length} characters`;
+            
+            if (length > 500) {
+                charCounter.classList.add('warning');
+                aiNotice.classList.add('show');
+            } else {
+                charCounter.classList.remove('warning');
+                aiNotice.classList.remove('show');
+            }
+        });
+
+        // Submit ticket form
+        document.getElementById('ticketForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const title = document.getElementById('title').value;
+            const description = document.getElementById('description').value;
+            const assignedTo = document.getElementById('assignTo').value;
+
+            const submitBtn = document.getElementById('submitBtn');
+            const message = document.getElementById('ticketMessage');
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Creating...';
+            message.classList.remove('show', 'success', 'error');
+
+            try {
+                const response = await fetch('/api/tickets', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ title, description, assignedTo })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    message.textContent = 'Ticket created successfully!';
+                    message.classList.add('show', 'success');
+                    document.getElementById('ticketForm').reset();
+                    charCounter.textContent = '0 characters';
+                    charCounter.classList.remove('warning');
+                    aiNotice.classList.remove('show');
+                    loadTickets();
+                } else {
+                    message.textContent = data.error || 'Failed to create ticket';
+                    message.classList.add('show', 'error');
+                }
+            } catch (error) {
+                message.textContent = 'An error occurred. Please try again.';
+                message.classList.add('show', 'error');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Create Ticket';
+            }
+        });
+
+        // Load tickets
+        async function loadTickets() {
+            await loadAssignedTickets();
+            await loadCreatedTickets();
+        }
+
+        async function loadAssignedTickets() {
+            try {
+                const response = await fetch('/api/tickets/assigned');
+                const tickets = await response.json();
+                const container = document.getElementById('assignedTickets');
+
+                if (tickets.length === 0) {
+                    container.innerHTML = '<div class="empty-state">No tickets assigned to you</div>';
+                } else {
+                    container.innerHTML = tickets.map(ticket => `
+                        <div class="ticket-item" onclick="viewTicket('${ticket.id}')">
+                            <div class="ticket-header">
+                                <div class="ticket-title">${escapeHtml(ticket.title)}</div>
+                                <div class="ticket-date">${formatDate(ticket.created_at)}</div>
+                            </div>
+                            <div class="ticket-meta">
+                                <span>From: ${escapeHtml(ticket.assigned_from)}</span>
+                                ${ticket.summary ? '<span>✨ AI Summarized</span>' : ''}
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Failed to load assigned tickets:', error);
+            }
+        }
+
+        async function loadCreatedTickets() {
+            try {
+                const response = await fetch('/api/tickets/created');
+                const tickets = await response.json();
+                const container = document.getElementById('createdTickets');
+
+                if (tickets.length === 0) {
+                    container.innerHTML = '<div class="empty-state">No tickets created by you</div>';
+                } else {
+                    container.innerHTML = tickets.map(ticket => `
+                        <div class="ticket-item" onclick="viewTicket('${ticket.id}')">
+                            <div class="ticket-header">
+                                <div class="ticket-title">${escapeHtml(ticket.title)}</div>
+                                <div class="ticket-date">${formatDate(ticket.created_at)}</div>
+                            </div>
+                            <div class="ticket-meta">
+                                <span>To: ${escapeHtml(ticket.assigned_to)}</span>
+                                ${ticket.summary ? '<span>✨ AI Summarized</span>' : ''}
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Failed to load created tickets:', error);
+            }
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+            event.target.classList.add('active');
+            document.getElementById(tab + 'Tab').classList.add('active');
+        }
+
+        function viewTicket(id) {
+            window.location.href = `/dashboard/tickets/${id}`;
+        }
+
+        function formatDate(timestamp) {
+            return new Date(timestamp).toLocaleString();
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        async function logout() {
+            try {
+                await fetch('/logout', { method: 'POST' });
+                window.location.href = '/login';
+            } catch (error) {
+                window.location.href = '/login';
+            }
+        }
+
+        // Initialize
+        checkAuth().then(() => {
+            loadUsers();
+            loadTickets();
+        });
+    </script>
+</body>
+</html>
